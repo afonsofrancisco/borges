@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Amigo Secreto — Sorteador</title>
+  <title>Amigo Secreto — Sorteador com Blacklist</title>
   <style>
     :root{--bg:#0b1020;--card:#0f1724;--accent:#e11d48;--accent2:#06b6d4;--muted:#9ca3af}
     *{box-sizing:border-box;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial}
@@ -16,7 +16,7 @@
     .grid{display:grid;grid-template-columns:1fr 420px;gap:18px}
     .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:16px;border-radius:12px;box-shadow:0 6px 24px rgba(2,6,23,0.6)}
     label{display:block;font-size:13px;margin-bottom:8px;color:var(--muted)}
-    textarea{width:100%;min-height:220px;padding:12px;border-radius:8px;border:1px dashed rgba(255,255,255,0.06);background:transparent;color:inherit;resize:vertical}
+    textarea{width:100%;min-height:120px;padding:12px;border-radius:8px;border:1px dashed rgba(255,255,255,0.06);background:transparent;color:inherit;resize:vertical}
     input[type=text]{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:inherit}
     .row{display:flex;gap:10px;align-items:center}
     button{background:linear-gradient(90deg,var(--accent),var(--accent2));border:none;color:white;padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:600}
@@ -33,7 +33,6 @@
     .subtitle{color:var(--muted);font-size:13px}
     footer{margin-top:18px;color:var(--muted);font-size:13px}
     .notice{background:rgba(255,255,255,0.02);padding:10px;border-radius:8px;margin-top:12px}
-    .qr{width:120px;height:120px;border-radius:8px;background:white;display:flex;align-items:center;justify-content:center;color:#111}
     @media(max-width:900px){.grid{grid-template-columns:1fr;}.logo .tree{display:none}}
   </style>
 </head>
@@ -52,7 +51,7 @@
         </g>
       </svg>
       <div>
-        <h1>Amigo Secreto — Sorteador</h1>
+        <h1>Amigo Secreto — Sorteador com Blacklist</h1>
         <div class="subtitle">Gera links/token únicos para cada participante. Só a pessoa com o link/token vê o resultado.</div>
       </div>
     </div>
@@ -61,8 +60,8 @@
   <div class="container">
     <div class="grid">
       <div class="card">
-        <label>1) Cole a lista de participantes (um por linha)</label>
-        <textarea id="namesInput" placeholder="Ex:\nAna\nBruno\nCarla\nDiego"></textarea>
+        <label>1) Cole a lista de participantes e suas restrições (formato: Nome: proibidos separados por vírgula)</label>
+        <textarea id="namesInput" placeholder="Ex:\nAna: Bruno, Carla\nBruno: Ana\nCarla:\nDiego: Ana, Bruno"></textarea>
 
         <div style="display:flex;gap:10px;margin-top:10px;align-items:center">
           <button id="generateBtn">Gerar atribuições</button>
@@ -73,89 +72,88 @@
         <div class="notice">
           <strong>Como funciona</strong>
           <ul>
-            <li>O sistema gera uma correspondência 1→1 sem que ninguém tire o próprio nome.</li>
-            <li>Para cada participante você recebe um <em>link</em> e um <em>token</em>. Envie um privado a cada pessoa.</li>
-            <li>Quem abrir o link (ou colar o token na página) verá apenas o próprio amigo secreto.</li>
+            <li>O sistema gera uma correspondência 1→1 respeitando blacklist e evitando que alguém tire a si mesmo.</li>
+            <li>Para cada participante você recebe um <em>link</em> e um <em>token</em>. Envie em privado.</li>
+            <li>Quem abrir o link verá apenas o seu amigo secreto.</li>
           </ul>
         </div>
 
         <div id="generatedArea" style="display:none;margin-top:12px">
           <label>2) Cópia dos links/tokens (envie em privado)</label>
           <div id="linksContainer" class="links"></div>
-          <div style="margin-top:10px;color:var(--muted);font-size:13px">Dica: copie o token e cole numa mensagem privada. O link também funciona se você hospedar este arquivo online.</div>
         </div>
 
       </div>
 
       <div class="card">
         <div id="revealPanel">
-          <label>Abrir link direto</label>
+          <label>Abrir link/token direto</label>
           <div class="row" style="gap:8px;margin-bottom:8px">
             <input id="tokenInput" type="text" placeholder="Cole token ou link aqui" />
             <button id="openTokenBtn" class="small">Abrir</button>
           </div>
 
-          <div class="result-card card" style="margin-top:8px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01))">
+          <div class="result-card card" style="margin-top:8px;">
             <div id="resultArt">🎁</div>
             <div id="resultText" style="margin-top:8px">
               <div class="subtitle">Seu amigo secreto aparecerá aqui</div>
             </div>
           </div>
-
-          <footer>
-            <div>Recomendações:</div>
-            <ul>
-              <li>Não envie os links/token em grupo — mande em privado.</li>
-              <li>Se preferir hospedá-lo, faça upload do arquivo <code>amigo-secreto.html</code> no GitHub Pages ou similar.</li>
-            </ul>
-          </footer>
         </div>
       </div>
     </div>
   </div>
 
   <script>
-    // Utilities
     const el = id=>document.getElementById(id);
     function base64Encode(str){return btoa(unescape(encodeURIComponent(str)))}
     function base64Decode(b){return decodeURIComponent(escape(atob(b)))}
     function uuid(){return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{let r=Math.random()*16|0;let v=c=='x'?r:(r&0x3|0x8);return v.toString(16)})}
 
-    // Derangement: shuffle until no fixed point (works fine for n>1)
-    function derangement(arr){
-      const n=arr.length; if(n===1) return null;
-      let perm = arr.map((_,i)=>i);
-      for(let attempts=0;attempts<10000;attempts++){
-        // Fisher-Yates
-        for(let i=n-1;i>0;i--){
-          const j=Math.floor(Math.random()*(i+1));
-          [perm[i],perm[j]]=[perm[j],perm[i]];
-        }
-        let ok=true; for(let i=0;i<n;i++) if(perm[i]===i){ok=false;break}
-        if(ok) return perm;
-      }
-      return null; // failed
+    function parseInput(text){
+      const lines = text.trim().split('\n');
+      return lines.map(l=>{
+        const [name,bl] = l.split(':').map(s=>s.trim());
+        const blacklist = bl ? bl.split(',').map(x=>x.trim()).filter(x=>x.length) : [];
+        return {name, blacklist};
+      });
     }
 
-    // When generate
+    function assignWithBlacklist(participants){
+      const n = participants.length;
+      let names, tries=0;
+      do{
+        names = participants.map(p=>p.name);
+        // shuffle
+        for(let i=names.length-1;i>0;i--){
+          const j=Math.floor(Math.random()*(i+1));
+          [names[i],names[j]]=[names[j],names[i]];
+        }
+        let valid=true;
+        for(let i=0;i<n;i++){
+          const from = participants[i];
+          const to = names[i];
+          if(to===from.name || from.blacklist.includes(to)){valid=false;break;}
+        }
+        tries++;
+        if(tries>10000) return null;
+      }while(!valid);
+      return participants.map((p,i)=>({from:p.name,to:names[i]}));
+    }
+
     el('generateBtn').addEventListener('click',()=>{
       const raw = el('namesInput').value.trim();
-      if(!raw){alert('Cole a lista de participantes (um por linha)');return}
-      const names = raw.split('\n').map(s=>s.trim()).filter(s=>s.length);
-      const n = names.length;
-      if(n<2){alert('São necessários pelo menos 2 participantes.');return}
-      const perm = derangement(names);
-      if(!perm){alert('Não foi possível gerar uma atribuição sem conflitos. Tente novamente.');return}
-      // build assignments
-      const assigns = names.map((from,i)=>({from, to:names[perm[i]]}));
-      // display links / tokens
+      if(!raw){alert('Cole a lista de participantes e restrições');return}
+      const participants = parseInput(raw);
+      if(participants.length<2){alert('São necessários pelo menos 2 participantes.');return}
+      const assigns = assignWithBlacklist(participants);
+      if(!assigns){alert('Não foi possível gerar uma atribuição válida. Verifique as restrições.');return}
       const container = el('linksContainer'); container.innerHTML='';
       const baseUrl = (location.href.split('#')[0]);
       assigns.forEach(item=>{
         const tokenObj = {from:item.from,to:item.to,ts:Date.now(),id:uuid()};
         const token = base64Encode(JSON.stringify(tokenObj));
         const link = baseUrl + '#reveal=' + encodeURIComponent(token);
-        // element
         const div = document.createElement('div'); div.className='participant';
         const left = document.createElement('div'); left.innerHTML=`<div style="font-weight:700">${escapeHtml(item.from)}</div><div class="subtitle">Envie em privado</div>`;
         const right = document.createElement('div'); right.style.display='flex'; right.style.flexDirection='column'; right.style.alignItems='flex-end';
@@ -171,84 +169,36 @@
         container.appendChild(div);
       });
       el('generatedArea').style.display='block';
-      // show small preview of assignments (only for organizer)
-      showOrganizerPreview(assigns);
     });
 
-    el('clearBtn').addEventListener('click',()=>{el('namesInput').value=''; el('generatedArea').style.display='none'; el('linksContainer').innerHTML=''; el('previewList')&&el('previewList').remove()});
+    el('clearBtn').addEventListener('click',()=>{el('namesInput').value=''; el('generatedArea').style.display='none'; el('linksContainer').innerHTML=''});
 
-    // Open token from input or from URL
     el('openTokenBtn').addEventListener('click',()=>{const t=el('tokenInput').value.trim(); if(!t){alert('Cole um token ou link antes.');return} openTokenFromAny(t)});
 
     function openTokenFromAny(s){
       try{
-        // if full link with #reveal=...
         const hashIndex = s.indexOf('#reveal=');
         if(hashIndex!==-1) s = decodeURIComponent(s.slice(hashIndex+8));
-        // if it's a URL that includes ? or others, try extract
-        if(s.includes('%7B') || s.includes('%22')) s = decodeURIComponent(s);
         const json = JSON.parse(base64Decode(s));
         showResult(json);
-      }catch(e){alert('Token inválido ou corrompido. Certifique-se de colar o token/link completo.');console.error(e)}
+      }catch(e){alert('Token inválido ou corrompido.'); console.error(e)}
     }
 
-    // On page load: check URL fragment
     (function(){
       const frag = location.hash;
       if(frag && frag.startsWith('#reveal=')){
         const token = decodeURIComponent(frag.slice(8));
-        try{const json = JSON.parse(base64Decode(token)); showResult(json);}
-        catch(e){console.warn('Não foi possível decodificar o token na URL',e)}
+        try{const json = JSON.parse(base64Decode(token)); showResult(json);}catch(e){console.warn(e)}
       }
     })();
 
     function showResult(obj){
       const art = el('resultArt'); const txt = el('resultText');
-      art.innerHTML = `
-        <svg width="80" height="80" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M12 2l3 6h6l-4.8 3.5L20 20l-8-5-8 5 1.8-8.5L1 8h6l3-6z" fill="#FBBF24"/>
-        </svg>`;
+      art.innerHTML = '🎁';
       txt.innerHTML = `<div class="subtitle">${escapeHtml(obj.from)}, seu amigo secreto é:</div><div class="reveal-name">${escapeHtml(obj.to)}</div>`;
-      // confetti? lightweight
-      joy();
-    }
-
-    function showOrganizerPreview(assigns){
-      // small hidden preview list so organizer can check
-      const container = el('linksContainer');
-      const preview = document.createElement('div'); preview.id='previewList'; preview.style.marginTop='12px';
-      preview.innerHTML = '<label>Pré-visualização (apenas organizador)</label>';
-      const list = document.createElement('div'); list.className='participants-list';
-      assigns.forEach(a=>{const row=document.createElement('div');row.className='participant';row.innerHTML=`<div>${escapeHtml(a.from)}</div><div class="chip">→ ${escapeHtml(a.to)}</div>`;list.appendChild(row)});
-      preview.appendChild(list); container.appendChild(preview);
     }
 
     function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]))}
-
-    // little celebration
-    function joy(){
-      // simple falling stars
-      for(let i=0;i<18;i++){
-        const p=document.createElement('div');
-        p.style.position='fixed'; p.style.left=(Math.random()*100)+'%'; p.style.top='-20px'; p.style.zIndex=9999;
-        p.style.fontSize=(8+Math.random()*18)+'px'; p.style.opacity=Math.random(); p.textContent=['✨','🎄','🎁','❄️'][Math.floor(Math.random()*4)];
-        document.body.appendChild(p);
-        const dur=2000+Math.random()*1800;
-        p.animate([{transform:'translateY(0) rotate(0deg)'},{transform:`translateY(${window.innerHeight+40}px) rotate(${Math.random()*360}deg)`}],{duration:dur,iterations:1,easing:'linear'}).onfinish=()=>p.remove();
-      }
-    }
-
-    // helper: if user pasted a full URL at load, try decode
-    window.addEventListener('paste', (e)=>{
-      try{
-        const text = (e.clipboardData||window.clipboardData).getData('text');
-        if(text && text.includes('#reveal=')){
-          // prefill token input
-          el('tokenInput').value = text;
-        }
-      }catch(e){}
-    });
-
   </script>
 </body>
 </html>
