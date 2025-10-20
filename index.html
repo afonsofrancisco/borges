@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt-BR">
+<html lang="pt-PT">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -60,7 +60,7 @@
 
   <div class="container">
     <div class="grid">
-      <div class="card">
+      <div id="editorCard" class="card">
         <label>1) Cole a lista de participantes e suas restrições (formato: Nome: proibidos separados por vírgula)</label>
         <textarea id="namesInput" placeholder="Ex:\nAna: Bruno, Carla\nBruno: Ana\nCarla:\nDiego: Ana, Bruno"></textarea>
 
@@ -87,7 +87,7 @@
 
       </div>
 
-      <div class="card">
+  <div id="revealCard" class="card" style="display:none">
         <div id="revealPanel">
           <label>Abrir link/token direto</label>
           <div class="row" style="gap:8px;margin-bottom:8px">
@@ -122,15 +122,16 @@
     }
 
     function assignWithBlacklist(participants){
+      console.log('Assigning with blacklist', participants);
       const n = participants.length;
-      let names, tries=0;
+      let names, tries=0, valid;
       do{
         names = participants.map(p=>p.name);
         for(let i=names.length-1;i>0;i--){
           const j=Math.floor(Math.random()*(i+1));
           [names[i],names[j]]=[names[j],names[i]];
         }
-        let valid=true;
+        valid = true;
         for(let i=0;i<n;i++){
           const from = participants[i];
           const to = names[i];
@@ -140,6 +141,18 @@
         if(tries>10000) return null;
       }while(!valid);
       return participants.map((p,i)=>({from:p.name,to:names[i]}));
+    }
+
+    // Helpers to show/hide the two cards depending on whether a token is available
+    function showEditorCard(){
+      const ed = el('editorCard'); const rc = el('revealCard');
+      if(ed) ed.style.display = 'block';
+      if(rc) rc.style.display = 'none';
+    }
+    function showRevealCard(){
+      const ed = el('editorCard'); const rc = el('revealCard');
+      if(ed) ed.style.display = 'none';
+      if(rc) rc.style.display = 'block';
     }
 
     el('generateBtn').addEventListener('click',async ()=>{
@@ -177,7 +190,7 @@
 
     el('clearBtn').addEventListener('click',()=>{el('namesInput').value=''; el('generatedArea').style.display='none'; el('linksContainer').innerHTML=''});
 
-    el('openTokenBtn').addEventListener('click',()=>{const t=el('tokenInput').value.trim(); if(!t){alert('Cole um token ou link antes.');return} openTokenFromAny(t)});
+  el('openTokenBtn').addEventListener('click',()=>{const t=el('tokenInput').value.trim(); if(!t){alert('Cole um token ou link antes.');return} openTokenFromAny(t)});
 
     function openTokenFromAny(s){
       try{
@@ -185,6 +198,7 @@
         if(hashIndex!==-1) s = decodeURIComponent(s.slice(hashIndex+8));
         const json = JSON.parse(base64Decode(s));
         showResult(json);
+        showRevealCard();
       }catch(e){alert('Token inválido ou corrompido.'); console.error(e)}
     }
 
@@ -192,8 +206,10 @@
       const frag = location.hash;
       if(frag && frag.startsWith('#reveal=')){
         const token = decodeURIComponent(frag.slice(8));
-        try{const json = JSON.parse(base64Decode(token)); showResult(json);}catch(e){console.warn(e)}
+        try{const json = JSON.parse(base64Decode(token)); showResult(json); showRevealCard(); return;}catch(e){console.warn(e)}
       }
+      // default: no token in hash -> show editor
+      showEditorCard();
     })();
 
     function showResult(obj){
