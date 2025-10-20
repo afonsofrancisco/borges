@@ -31,6 +31,7 @@
     .result-card{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px;text-align:center}
     .reveal-name{font-size:28px;font-weight:700;margin-top:8px}
     .subtitle{color:var(--muted);font-size:13px}
+    .loading{display:none;margin-top:10px;color:var(--accent);font-weight:600}
     footer{margin-top:18px;color:var(--muted);font-size:13px}
     .notice{background:rgba(255,255,255,0.02);padding:10px;border-radius:8px;margin-top:12px}
     @media(max-width:900px){.grid{grid-template-columns:1fr;}.logo .tree{display:none}}
@@ -68,6 +69,7 @@
           <button id="clearBtn" class="ghost small">Limpar</button>
           <div style="margin-left:auto;color:var(--muted);font-size:13px">Tema: 🎄 Natal</div>
         </div>
+        <div id="loading" class="loading">Calculando correspondências...</div>
 
         <div class="notice">
           <strong>Como funciona</strong>
@@ -124,7 +126,6 @@
       let names, tries=0;
       do{
         names = participants.map(p=>p.name);
-        // shuffle
         for(let i=names.length-1;i>0;i--){
           const j=Math.floor(Math.random()*(i+1));
           [names[i],names[j]]=[names[j],names[i]];
@@ -141,12 +142,15 @@
       return participants.map((p,i)=>({from:p.name,to:names[i]}));
     }
 
-    el('generateBtn').addEventListener('click',()=>{
+    el('generateBtn').addEventListener('click',async ()=>{
+      el('loading').style.display='block';
+      await new Promise(r=>setTimeout(r,50));
       const raw = el('namesInput').value.trim();
-      if(!raw){alert('Cole a lista de participantes e restrições');return}
+      if(!raw){alert('Cole a lista de participantes e restrições'); el('loading').style.display='none'; return}
       const participants = parseInput(raw);
-      if(participants.length<2){alert('São necessários pelo menos 2 participantes.');return}
+      if(participants.length<2){alert('São necessários pelo menos 2 participantes.'); el('loading').style.display='none'; return}
       const assigns = assignWithBlacklist(participants);
+      el('loading').style.display='none';
       if(!assigns){alert('Não foi possível gerar uma atribuição válida. Verifique as restrições.');return}
       const container = el('linksContainer'); container.innerHTML='';
       const baseUrl = (location.href.split('#')[0]);
